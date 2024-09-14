@@ -301,22 +301,59 @@ instance : CommMonoid Z where
   one := one
   one_mul := one_mul
 
+theorem zero_mul (a : Z) : zero * a = 0 := by
+  cases Quotient.exists_rep a with
+  | intro aPos h =>
+    let (a₁, a₂) := aPos
+    repeat rw [<- h]
+    apply Quotient.sound
+    simp only [N.mul_comm]
+    simp only [OfNat.ofNat, Zero.zero, N.add_zero, N.mul_zero]
+    apply Equivalence.refl eqv_iseqv
+
+theorem mul_zero (a : Z) : a * zero = 0 := by
+  rw [mul_comm]
+  apply zero_mul
+
+theorem left_distrib (a b c : Z) : a * (b + c) = a * b + a * c := by
+  cases Quotient.exists_rep a with
+  | intro aPos h1 =>
+  cases Quotient.exists_rep b with
+  | intro bPos h2 =>
+  cases Quotient.exists_rep c with
+  | intro cPos h3 =>
+  rw [<- h1, <- h2, <- h3]
+  apply Quotient.sound
+  have swap_add (a b c : N) : a + (b + c) = b + (a + c) := by
+    simp only [<- N.add_assoc a, N.add_comm a, N.add_assoc]
+  have swap_mul (a b c : N) : a * (b * c) = b * (a * c) := by
+    simp only [<- N.mul_assoc a, N.mul_comm a, N.mul_assoc]
+  repeat rw [N.left_distrib]
+  repeat rw [N.add_assoc]
+  simp only [swap_add, N.add_comm, swap_mul, N.mul_comm]
+  apply Equivalence.refl eqv_iseqv
+
+theorem right_distrib (a b c : Z) : (a + b) * c = a * c + b * c := by
+  rw [mul_comm]
+  rw [left_distrib]
+  rw [mul_comm c, mul_comm c]
+
 instance : CommRing Z where
   add_comm := add_comm
   add_zero := add_zero
-  left_distrib := sorry
+  left_distrib := left_distrib
   mul_assoc := mul_assoc
   mul_comm := mul_comm
   mul_one := mul_one
-  mul_zero := sorry
+  mul_zero := mul_zero
   neg_add_cancel := neg_add_cancel
   nsmul := nsmul
   nsmul_succ := nsmul_succ
   nsmul_zero := nsmul_zero
   one_mul := one_mul
-  right_distrib := sorry
+  right_distrib := right_distrib
   zero_add := zero_add
-  zero_mul := sorry
+  zero_mul := zero_mul
   zsmul := zsmul
   zsmul_neg' := zsmul_neg'
   zsmul_succ' := zsmul_succ'
