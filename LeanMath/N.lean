@@ -5,6 +5,8 @@ inductive N where
   | succ : N -> N
 
 namespace N
+@[simp] axiom zero_neq_succ {a : N} : zero = a.succ -> False
+
 def add : N -> N -> N
   | zero, n => n
   | succ m, n => succ $ add m n
@@ -216,4 +218,19 @@ instance : CommMonoid N where
   mul_one := mul_one
   one := one
   one_mul := one_mul
+
+@[simp] theorem mul_eq_zero {a b : N} (h : b ≠ 0) : a * b = 0 -> a = 0 := by
+  intro h2
+  simp only [HMul.hMul, Mul.mul] at h2
+  induction a
+  case zero =>
+    rfl
+  case succ n ih =>
+    simp only [mul] at h2
+    induction b
+    case zero =>
+      contradiction
+    case succ m _ =>
+      rw [<- succ_add] at h2
+      contradiction
 end N

@@ -190,7 +190,7 @@ instance : AddCommMonoid Z where
   nsmul := nsmul
   nsmul_succ := nsmul_succ
   nsmul_zero := nsmul_zero
-  zero := Z.mk (N.zero, N.zero)
+  zero := zero
   zero_add := zero_add
 
 def neg : Z -> Z := Quotient.lift negN₂ negN₂_is_well_defined
@@ -358,4 +358,218 @@ instance : CommRing Z where
   zsmul_neg' := zsmul_neg'
   zsmul_succ' := zsmul_succ'
   zsmul_zero' := zsmul_zero'
+
+@[simp] theorem add_right_cancel_iff {a b c : Z} : a + c = b + c ↔ a = b := by
+  apply Iff.intro
+  case mp =>
+    intro h
+    have : a + -c + c = b + -c + c := by
+      repeat rw [add_assoc]
+      rw [add_comm (-c)]
+      repeat rw [<- add_assoc]
+      rw [h]
+    repeat rw [add_assoc] at this
+    rw [neg_add_cancel] at this
+    repeat rw [add_zero] at this
+    exact this
+  case mpr =>
+    intro h
+    rw [h]
+
+@[simp] theorem neg_mul {a b : Z} : -(a * b) = -a * b := by
+  cases Quotient.exists_rep a with
+  | intro aPos h1 =>
+  cases Quotient.exists_rep b with
+  | intro bPos h2 =>
+  rw [<- h1, <- h2]
+  apply Quotient.sound
+  simp only [N.add_comm]
+  apply Equivalence.refl eqv_iseqv
+
+@[simp] private theorem exists_reduce {a : N₂} : ∃b : N, eqv a (b, N.zero) ∨ eqv a (N.zero, b) := by
+  let (a₁, a₂) := a
+  induction a₁
+  case zero =>
+    exists a₂
+    right
+    apply eqv_is_refl
+  case succ n ih1 =>
+    induction a₂
+    case zero =>
+      exists n.succ
+      left
+      apply eqv_is_refl
+    case succ m ih2 =>
+      have eqv_succ_left {a₁ a₂ b₁ b₂ : N} : eqv (a₁, a₂) (b₁, b₂) -> eqv (a₁.succ, a₂) (b₁.succ, b₂) := by
+        clear ih1 ih2
+        intro h
+        simp only [eqv] at *
+        rw [<- N.succ_add]
+        rw [N.add_succ a₂]
+        rw [h]
+      have eqv_succ_right {a₁ a₂ b₁ b₂ : N} : eqv (a₁, a₂) (b₁, b₂.succ) -> eqv (a₁.succ, a₂) (b₁, b₂) := by
+        clear eqv_succ_left ih1 ih2
+        intro h
+        simp only [eqv] at *
+        simp only [N.succ_add, N.add_succ] at *
+        exact h
+      rcases ih1 with ⟨b, h⟩
+      cases h
+      case inl h_left =>
+        exists b.succ
+        left
+        apply eqv_succ_left h_left
+      case inr h_right =>
+        cases b
+        case zero =>
+          exists 1
+          left
+          apply eqv_succ_left h_right
+        case succ b =>
+          exists b
+          right
+          apply eqv_succ_right h_right
+
+theorem exists_reduce_Z {a : Z} : ∃b : N, a = Z.mk (b, 0) ∨ a = Z.mk (0, b) := by
+  cases Quotient.exists_rep a with
+  | intro aPos h1 =>
+  rcases @exists_reduce aPos with ⟨b, h⟩
+  exists b
+  cases h
+  case inl h_left =>
+    left
+    rw [<- h1]
+    apply Quotient.sound
+    exact h_left
+  case inr h_right =>
+    right
+    rw [<- h1]
+    apply Quotient.sound
+    exact h_right
+
+@[simp] theorem mul_eq_zero {a b : Z} (h : b ≠ 0) : a * b = 0 -> a = 0 := by
+  intro ph
+  rcases @exists_reduce_Z a with ⟨n, hn⟩
+  rcases @exists_reduce_Z b with ⟨m, hm⟩
+  have m_not_zero : m ≠ 0 := by
+    by_contra contra
+    cases hm
+    case inl hm =>
+      rw [contra] at hm
+      simp only [OfNat.ofNat, Zero.zero, zero] at h hm
+      contradiction
+    case inr hm =>
+      rw [contra] at hm
+      simp only [OfNat.ofNat, Zero.zero, zero] at h hm
+      contradiction
+  cases hn
+  case inl hn =>
+    cases hm
+    case inl hm =>
+      rw [hn, hm] at ph
+      have : n * m = 0 := by
+        dsimp [OfNat.ofNat, Zero.zero, zero] at ph
+        let h := Quotient.exact ph
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        exact h
+      suffices n = 0 by
+        try simp
+        rw [hn]
+        simp only [OfNat.ofNat, Zero.zero, zero]
+        apply Quotient.sound
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        exact this
+      apply N.mul_eq_zero m_not_zero
+      exact this
+    case inr hm =>
+      rw [hn, hm] at ph
+      have : n * m = 0 := by
+        dsimp [OfNat.ofNat, Zero.zero, zero] at ph
+        let h := Quotient.exact ph
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        apply Eq.symm
+        exact h
+      suffices n = 0 by
+        try simp
+        rw [hn]
+        simp only [OfNat.ofNat, Zero.zero, zero]
+        apply Quotient.sound
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        exact this
+      apply N.mul_eq_zero m_not_zero
+      exact this
+  case inr hn =>
+    cases hm
+    case inl hm =>
+      rw [hn, hm] at ph
+      have : n * m = 0 := by
+        dsimp [OfNat.ofNat, Zero.zero, zero] at ph
+        let h := Quotient.exact ph
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        apply Eq.symm
+        exact h
+      suffices n = 0 by
+        try simp
+        rw [hn]
+        simp only [OfNat.ofNat, Zero.zero, zero]
+        apply Quotient.sound
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        apply Eq.symm
+        exact this
+      apply N.mul_eq_zero m_not_zero
+      exact this
+    case inr hm =>
+      rw [hn, hm] at ph
+      have : n * m = 0 := by
+        dsimp [OfNat.ofNat, Zero.zero, zero] at ph
+        let h := Quotient.exact ph
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        exact h
+      suffices n = 0 by
+        try simp
+        rw [hn]
+        simp only [OfNat.ofNat, Zero.zero, zero]
+        apply Quotient.sound
+        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        apply Eq.symm
+        exact this
+      apply N.mul_eq_zero m_not_zero
+      exact this
+
+private def NonZeroZ := {z : Z // z ≠ 0}
+private instance : Coe NonZeroZ Z where
+  coe a := a.val
+
+private def Z₂ := Z × NonZeroZ
+
+private instance : HMul Z NonZeroZ Z where
+  hMul := fun a _ => a
+
+@[simp] theorem mul_right_cancel_iff {a b : Z} {c : NonZeroZ} : a * c = b * c ↔ a = b := by
+  apply Iff.intro
+  case mp =>
+    intro h
+    have : a * c - b * c = 0 := by
+      apply Iff.mp $ Z.add_right_cancel_iff (c := (b * c.val))
+      simp only [OfNat.ofNat, Zero.zero, Z.zero_add]
+      simp only [HSub.hSub, Sub.sub, SubNegMonoid.sub', Z.add_assoc, Z.neg_add_cancel, Z.add_zero]
+      exact h
+    have : (a - b) * c = 0 := by
+      simp only [HSub.hSub, Sub.sub, SubNegMonoid.sub', Z.neg_mul, <- Z.right_distrib] at this
+      simp only [HSub.hSub, Sub.sub, SubNegMonoid.sub']
+      exact this
+    have : a - b = 0 := by
+      apply mul_eq_zero (b := c.val)
+      exact c.property
+      exact this
+    have : a = b := by
+      apply Iff.mp $ Z.add_right_cancel_iff (c := -b)
+      simp only [HSub.hSub, Sub.sub, SubNegMonoid.sub'] at this
+      rw [Z.add_comm b]
+      rw [Z.neg_add_cancel]
+      exact this
+    exact this
+  case mpr =>
+    intro h
+    rw [h]
 end Z
