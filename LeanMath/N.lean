@@ -4,19 +4,15 @@ inductive N where
   | zero : N
   | succ : N -> N
 
-private def add : N -> N -> N
-  | N.zero, n => n
-  | N.succ m, n => N.succ $ add m n
+namespace N
+def add : N -> N -> N
+  | zero, n => n
+  | succ m, n => succ $ add m n
 
 instance : Add N where
   add := add
 
-private def mul : N -> N -> N
-  | N.zero, _ => N.zero
-  | N.succ n, m => m + mul n m
-
-namespace N
-@[simp] theorem zero_add (a : N) : N.zero + a = a := by
+@[simp] theorem zero_add (a : N) : zero + a = a := by
   simp only [HAdd.hAdd, Add.add, add]
 
 @[simp] theorem add_succ (a b : N) : a + b.succ = (a + b).succ := by
@@ -31,7 +27,7 @@ namespace N
 @[simp] theorem succ_add (a b : N) : (a + b).succ = a.succ + b := by
   simp only [HAdd.hAdd, Add.add, add]
 
-@[simp] theorem add_zero (a : N) : a + N.zero = a := by
+@[simp] theorem add_zero (a : N) : a + zero = a := by
   simp only [HAdd.hAdd, Add.add]
   induction a
   case zero =>
@@ -83,7 +79,7 @@ instance : AddCommMonoid N where
   nsmul := nsmul
   nsmul_succ := nsmul_succ
   nsmul_zero := nsmul_zero
-  zero := N.zero
+  zero := zero
   zero_add := zero_add
 
 @[simp] axiom succ_eq {a b : N} : a.succ = b.succ -> a = b
@@ -94,12 +90,12 @@ instance : AddCommMonoid N where
     intro h
     induction c
     case zero =>
-      simp only [N.add_zero] at h
+      simp only [add_zero] at h
       simp only [h]
     case succ n ih =>
-      simp only [N.add_succ] at h
+      simp only [add_succ] at h
       rw [ih]
-      apply N.succ_eq
+      apply succ_eq
       exact h
   case mpr =>
     intro h
@@ -108,6 +104,10 @@ instance : AddCommMonoid N where
       simp only [h]
     case succ _ ih =>
       simp only [N.add_succ, ih]
+
+def mul : N -> N -> N
+  | zero, _ => zero
+  | succ n, m => m + mul n m
 
 instance : Mul N where
   mul := mul
@@ -120,11 +120,11 @@ instance : Mul N where
     case succ a ih =>
       simp only [mul]
       rw [ih]
-      rw [<- N.succ_add]
-      repeat rw [<- N.succ_add]
-      rw [<- N.add_assoc]
-      rw [<- N.add_comm a b]
-      rw [<- N.add_assoc]
+      rw [<- succ_add]
+      repeat rw [<- succ_add]
+      rw [<- add_assoc]
+      rw [<- add_comm a b]
+      rw [<- add_assoc]
   induction a
   case zero =>
     induction b
@@ -144,16 +144,16 @@ instance : Mul N where
       simp only [HMul.hMul, Mul.mul, mul] at *
       rw [ih]
       rw [mul_succ]
-      repeat rw [<- N.succ_add]
-      rw [<- N.add_assoc]
-      rw [<- N.add_comm a b]
-      rw [<- N.add_assoc]
+      repeat rw [<- succ_add]
+      rw [<- add_assoc]
+      rw [<- add_comm a b]
+      rw [<- add_assoc]
 
 @[simp] theorem zero_mul (a : N) : zero * a = zero := by
   simp only [HMul.hMul, Mul.mul, mul]
 
 @[simp] theorem mul_zero (a : N) : a * zero = zero := by
-  rw [<- N.mul_comm]
+  rw [<- mul_comm]
   apply zero_mul
 
 @[simp] theorem mul_succ (a b : N) : a * succ b = a * b + a := by
@@ -180,6 +180,12 @@ instance : Mul N where
     rw [add_comm (b*n)]
     repeat rw [<- add_assoc]
 
+@[simp] theorem left_distrib (a b c : N) : a * (b + c) = a * b + a * c := by
+  rw [mul_comm]
+  rw [right_distrib]
+  rw [mul_comm a]
+  rw [mul_comm c]
+
 @[simp] theorem mul_assoc (a b c : N) : a * b * c = a * (b * c) := by
   induction a
   case zero =>
@@ -194,10 +200,10 @@ instance : Mul N where
       rw [ih]
       simp only [succ_mul]
 
-private def one := N.succ 0
+def one := succ 0
 
 @[simp] theorem one_mul (a : N) : one * a = a := by
-  simp only [HMul.hMul, Mul.mul, mul, N.add_zero]
+  simp only [HMul.hMul, Mul.mul, mul, add_zero]
 
 @[simp] theorem mul_one (a : N) : a * one = a := by
   rw [<- mul_comm]
