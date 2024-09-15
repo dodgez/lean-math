@@ -4,21 +4,22 @@ import LeanMath.N
 
 private def N₂ := N × N
 
-private def eqv (n m : N₂) : Prop :=
+namespace Z
+def eqv (n m : N₂) : Prop :=
   n.1 + m.2 = n.2 + m.1
 
-@[simp] private theorem eqv_is_refl (x : N₂) :  eqv x x := by
-  simp only [eqv, N.add_comm]
+@[simp] theorem eqv_is_refl (x : N₂) :  Z.eqv x x := by
+  simp only [Z.eqv, N.add_comm]
 
-@[simp] private theorem eqv_is_symm {x y : N₂} : eqv x y -> eqv y x := by
+@[simp] theorem eqv_is_symm {x y : N₂} : Z.eqv x y -> Z.eqv y x := by
   intro h
-  simp only [eqv, N.add_comm] at *
+  simp only [Z.eqv, N.add_comm] at *
   simp only [h]
 
-@[simp] private theorem eqv_is_trans {x y z : N₂} : eqv x y -> eqv y z -> eqv x z := by
+@[simp] theorem eqv_is_trans {x y z : N₂} : Z.eqv x y -> Z.eqv y z -> Z.eqv x z := by
   intro h1
   intro h2
-  simp only [eqv] at *
+  simp only [Z.eqv] at *
   apply Iff.mp $ N.add_right_cancel_iff (c := y.snd)
   have : x.fst + y.snd + z.snd = x.snd + y.fst + z.snd :=
     Iff.mpr N.add_right_cancel_iff h1
@@ -29,25 +30,27 @@ private def eqv (n m : N₂) : Prop :=
   simp only [h2]
   simp only [N.add_comm]
 
-@[simp] private theorem eqv_iseqv : Equivalence eqv := {
+@[simp] theorem eqv_iseqv : Equivalence Z.eqv := {
   refl := eqv_is_refl
   symm := eqv_is_symm
   trans := eqv_is_trans
 }
 
-private instance : Setoid N₂ where
+instance : Setoid N₂ where
   iseqv := eqv_iseqv
-  r := eqv
+  r := Z.eqv
+end Z
 
-def Z := Quotient instSetoidN₂
-def Z.mk : N₂ -> Z := Quotient.mk instSetoidN₂
+def Z := Quotient Z.instSetoidN₂
+def Z.mk : N₂ -> Z := Quotient.mk Z.instSetoidN₂
 
-private def addN₂ : N₂ -> N₂ -> Z
+namespace Z
+def addN₂ : N₂ -> N₂ -> Z
   | (a, b), (c, d) => Z.mk (a + c, b + d)
-private theorem addN₂_is_well_defined (a₁ b₁ a₂ b₂ : N₂) (h1 : eqv a₁ a₂) (h2 : eqv b₁ b₂) : addN₂ a₁ b₁ = addN₂ a₂ b₂ := by
-  simp only [eqv, addN₂] at *
+theorem addN₂_is_well_defined (a₁ b₁ a₂ b₂ : N₂) (h1 : Z.eqv a₁ a₂) (h2 : Z.eqv b₁ b₂) : addN₂ a₁ b₁ = addN₂ a₂ b₂ := by
+  simp only [Z.eqv, addN₂] at *
   apply Quotient.sound
-  simp only [instHasEquivOfSetoid, Setoid.r, eqv]
+  simp only [instHasEquivOfSetoid, Setoid.r, Z.eqv]
   rw [N.add_assoc]
   rw [<- N.add_assoc b₁.fst]
   rw [N.add_comm b₁.fst]
@@ -59,47 +62,6 @@ private theorem addN₂_is_well_defined (a₁ b₁ a₂ b₂ : N₂) (h1 : eqv a
   rw [<- N.add_assoc a₂.fst]
   rw [N.add_comm a₂.fst]
   repeat rw [<- N.add_assoc]
-
-private def negN₂ : N₂ -> Z
-  | (a, b) => Z.mk (b, a)
-
-private theorem negN₂_is_well_defined (a b : N₂) (h : eqv a b) : negN₂ a = negN₂ b := by
-  simp only [eqv, addN₂] at *
-  apply Quotient.sound
-  simp only [instHasEquivOfSetoid, Setoid.r, eqv]
-  rw [h]
-
-private def mulN₂ : N₂ -> N₂ -> Z
-  | (a₁, a₂), (b₁, b₂) => Z.mk (a₁ * b₁ + a₂ * b₂, a₁ * b₂ + a₂ * b₁)
-
-private theorem mulN₂_is_well_defined (a₁ b₁ a₂ b₂ : N₂) (h1 : eqv a₁ a₂) (h2 : eqv b₁ b₂) : mulN₂ a₁ b₁ = mulN₂ a₂ b₂ := by
-  have swap_add (a b c : N) : a + (b + c) = b + (a + c) := by
-    simp only [<- N.add_assoc a, N.add_comm a, N.add_assoc]
-  apply Quotient.sound
-  case _ =>
-  simp only [HasEquiv.Equiv, Setoid.r, eqv] at *
-  apply Iff.mp $ N.add_right_cancel_iff (c := a₂.2 * b₁.1 + a₁.1 * b₂.1 + a₂.1 * b₁.2 + a₁.2 * b₂.2)
-  suffices a₁.1 * b₁.1 + a₂.2 * b₁.1 + (a₁.2 * b₁.2 + a₂.1 * b₁.2 + (a₁.2 * b₂.2 + a₂.1 * b₂.2 + (a₁.1 * b₂.1 + a₂.2 * b₂.1)))
-    = a₁.1 * b₁.2 + a₁.1 * b₂.1 + (a₁.2 * b₁.1 + a₁.2 * b₂.2 + (a₂.1 * b₁.2 + a₂.1 * b₂.1 + (a₂.2 * b₁.1 + a₂.2 * b₂.2))) by
-    repeat rw [N.add_assoc] at *
-    simp only [swap_add, this, N.add_comm] at *
-    exact this
-  repeat rw [<- N.right_distrib, <- N.left_distrib]
-  repeat rw [h1, h2]
-  rw [<- N.add_assoc ((a₁.2 + a₂.1) * b₁.2)]
-  rw [N.add_comm ((a₁.2 + a₂.1) * b₁.2)]
-  rw [N.add_assoc]
-  rw [<- N.add_assoc ((a₁.2 + a₂.1) * b₁.1)]
-  repeat rw [<- N.left_distrib, h2, <- N.left_distrib]
-  rw [N.add_comm (a₂.1 * (b₁.2 + b₂.1))]
-  rw [<- N.add_assoc (a₁.2 * (b₁.2 + b₂.1))]
-  rw [N.add_comm (a₁.2 * (b₁.2 + b₂.1))]
-  rw [N.add_assoc]
-  rw [<- N.add_assoc (a₁.1 * (b₁.2 + b₂.1))]
-  rw [<- N.right_distrib a₁.1, h1]
-  rw [<- N.right_distrib a₁.2]
-
-namespace Z
 def add : Z -> Z -> Z := Quotient.lift₂ addN₂ addN₂_is_well_defined
 
 private theorem add_is_lifted_addN₂ : ∀ (x y : N₂), add (Z.mk x) (Z.mk y) = addN₂ x y := by
@@ -124,7 +86,7 @@ def zero := Z.mk (N.zero, N.zero)
     rw [add_is_lifted_addN₂ (N.zero, N.zero) aPos]
     unfold addN₂
     let (a1, a2) := aPos
-    simp
+    simp only [N.add_comm, N.add_zero]
   }
 
 @[simp] theorem add_zero (a : Z) : a + zero = a := by
@@ -139,7 +101,7 @@ def zero := Z.mk (N.zero, N.zero)
     rw [add_is_lifted_addN₂ aPos (N.zero, N.zero)]
     unfold addN₂
     let (a1, a2) := aPos
-    simp
+    simp only [N.add_zero]
   }
 
 @[simp] theorem add_comm (a b : Z) : a + b = b + a := by
@@ -193,6 +155,13 @@ instance : AddCommMonoid Z where
   zero := zero
   zero_add := zero_add
 
+def negN₂ : N₂ -> Z
+  | (a, b) => Z.mk (b, a)
+theorem negN₂_is_well_defined (a b : N₂) (h : Z.eqv a b) : negN₂ a = negN₂ b := by
+  simp only [Z.eqv, addN₂] at *
+  apply Quotient.sound
+  simp only [instHasEquivOfSetoid, Setoid.r, Z.eqv]
+  rw [h]
 def neg : Z -> Z := Quotient.lift negN₂ negN₂_is_well_defined
 
 private theorem neg_is_lifted_negN₂ : ∀ (x : N₂), neg (Z.mk x) = negN₂ x := by
@@ -244,6 +213,34 @@ instance : AddGroup Z where
   zsmul_succ' := zsmul_succ'
   zsmul_zero' := zsmul_zero'
 
+def mulN₂ : N₂ -> N₂ -> Z
+  | (a₁, a₂), (b₁, b₂) => Z.mk (a₁ * b₁ + a₂ * b₂, a₁ * b₂ + a₂ * b₁)
+theorem mulN₂_is_well_defined (a₁ b₁ a₂ b₂ : N₂) (h1 : Z.eqv a₁ a₂) (h2 : Z.eqv b₁ b₂) : mulN₂ a₁ b₁ = mulN₂ a₂ b₂ := by
+  have swap_add (a b c : N) : a + (b + c) = b + (a + c) := by
+    simp only [<- N.add_assoc a, N.add_comm a, N.add_assoc]
+  apply Quotient.sound
+  case _ =>
+  simp only [HasEquiv.Equiv, Setoid.r, Z.eqv] at *
+  apply Iff.mp $ N.add_right_cancel_iff (c := a₂.2 * b₁.1 + a₁.1 * b₂.1 + a₂.1 * b₁.2 + a₁.2 * b₂.2)
+  suffices a₁.1 * b₁.1 + a₂.2 * b₁.1 + (a₁.2 * b₁.2 + a₂.1 * b₁.2 + (a₁.2 * b₂.2 + a₂.1 * b₂.2 + (a₁.1 * b₂.1 + a₂.2 * b₂.1)))
+    = a₁.1 * b₁.2 + a₁.1 * b₂.1 + (a₁.2 * b₁.1 + a₁.2 * b₂.2 + (a₂.1 * b₁.2 + a₂.1 * b₂.1 + (a₂.2 * b₁.1 + a₂.2 * b₂.2))) by
+    repeat rw [N.add_assoc] at *
+    simp only [swap_add, this, N.add_comm] at *
+    exact this
+  repeat rw [<- N.right_distrib, <- N.left_distrib]
+  repeat rw [h1, h2]
+  rw [<- N.add_assoc ((a₁.2 + a₂.1) * b₁.2)]
+  rw [N.add_comm ((a₁.2 + a₂.1) * b₁.2)]
+  rw [N.add_assoc]
+  rw [<- N.add_assoc ((a₁.2 + a₂.1) * b₁.1)]
+  repeat rw [<- N.left_distrib, h2, <- N.left_distrib]
+  rw [N.add_comm (a₂.1 * (b₁.2 + b₂.1))]
+  rw [<- N.add_assoc (a₁.2 * (b₁.2 + b₂.1))]
+  rw [N.add_comm (a₁.2 * (b₁.2 + b₂.1))]
+  rw [N.add_assoc]
+  rw [<- N.add_assoc (a₁.1 * (b₁.2 + b₂.1))]
+  rw [<- N.right_distrib a₁.1, h1]
+  rw [<- N.right_distrib a₁.2]
 def mul : Z -> Z -> Z := Quotient.lift₂ mulN₂ mulN₂_is_well_defined
 
 instance : Mul Z where
@@ -386,7 +383,7 @@ instance : CommRing Z where
   simp only [N.add_comm]
   apply Equivalence.refl eqv_iseqv
 
-@[simp] private theorem exists_reduce {a : N₂} : ∃b : N, eqv a (b, N.zero) ∨ eqv a (N.zero, b) := by
+@[simp] private theorem exists_reduce {a : N₂} : ∃b : N, Z.eqv a (b, N.zero) ∨ Z.eqv a (N.zero, b) := by
   let (a₁, a₂) := a
   induction a₁
   case zero =>
@@ -400,17 +397,17 @@ instance : CommRing Z where
       left
       apply eqv_is_refl
     case succ m ih2 =>
-      have eqv_succ_left {a₁ a₂ b₁ b₂ : N} : eqv (a₁, a₂) (b₁, b₂) -> eqv (a₁.succ, a₂) (b₁.succ, b₂) := by
+      have eqv_succ_left {a₁ a₂ b₁ b₂ : N} : Z.eqv (a₁, a₂) (b₁, b₂) -> Z.eqv (a₁.succ, a₂) (b₁.succ, b₂) := by
         clear ih1 ih2
         intro h
-        simp only [eqv] at *
+        simp only [Z.eqv] at *
         rw [<- N.succ_add]
         rw [N.add_succ a₂]
         rw [h]
-      have eqv_succ_right {a₁ a₂ b₁ b₂ : N} : eqv (a₁, a₂) (b₁, b₂.succ) -> eqv (a₁.succ, a₂) (b₁, b₂) := by
+      have eqv_succ_right {a₁ a₂ b₁ b₂ : N} : Z.eqv (a₁, a₂) (b₁, b₂.succ) -> Z.eqv (a₁.succ, a₂) (b₁, b₂) := by
         clear eqv_succ_left ih1 ih2
         intro h
-        simp only [eqv] at *
+        simp only [Z.eqv] at *
         simp only [N.succ_add, N.add_succ] at *
         exact h
       rcases ih1 with ⟨b, h⟩
@@ -470,14 +467,13 @@ theorem exists_reduce_Z {a : Z} : ∃b : N, a = Z.mk (b, 0) ∨ a = Z.mk (0, b) 
       have : n * m = 0 := by
         dsimp [OfNat.ofNat, Zero.zero, zero] at ph
         let h := Quotient.exact ph
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
         exact h
       suffices n = 0 by
-        try simp
         rw [hn]
         simp only [OfNat.ofNat, Zero.zero, zero]
         apply Quotient.sound
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
         exact this
       apply N.mul_eq_zero m_not_zero
       exact this
@@ -486,15 +482,14 @@ theorem exists_reduce_Z {a : Z} : ∃b : N, a = Z.mk (b, 0) ∨ a = Z.mk (0, b) 
       have : n * m = 0 := by
         dsimp [OfNat.ofNat, Zero.zero, zero] at ph
         let h := Quotient.exact ph
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
         apply Eq.symm
         exact h
       suffices n = 0 by
-        try simp
         rw [hn]
         simp only [OfNat.ofNat, Zero.zero, zero]
         apply Quotient.sound
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
         exact this
       apply N.mul_eq_zero m_not_zero
       exact this
@@ -505,15 +500,14 @@ theorem exists_reduce_Z {a : Z} : ∃b : N, a = Z.mk (b, 0) ∨ a = Z.mk (0, b) 
       have : n * m = 0 := by
         dsimp [OfNat.ofNat, Zero.zero, zero] at ph
         let h := Quotient.exact ph
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
         apply Eq.symm
         exact h
       suffices n = 0 by
-        try simp
         rw [hn]
         simp only [OfNat.ofNat, Zero.zero, zero]
         apply Quotient.sound
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
         apply Eq.symm
         exact this
       apply N.mul_eq_zero m_not_zero
@@ -523,14 +517,13 @@ theorem exists_reduce_Z {a : Z} : ∃b : N, a = Z.mk (b, 0) ∨ a = Z.mk (0, b) 
       have : n * m = 0 := by
         dsimp [OfNat.ofNat, Zero.zero, zero] at ph
         let h := Quotient.exact ph
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul] at h
         exact h
       suffices n = 0 by
-        try simp
         rw [hn]
         simp only [OfNat.ofNat, Zero.zero, zero]
         apply Quotient.sound
-        simp only [HasEquiv.Equiv, Setoid.r, eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
+        simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.mul_zero, N.add_zero, N.zero_add, N.zero_mul]
         apply Eq.symm
         exact this
       apply N.mul_eq_zero m_not_zero
@@ -541,9 +534,6 @@ private instance : Coe NonZeroZ Z where
   coe a := a.val
 
 private def Z₂ := Z × NonZeroZ
-
-private instance : HMul Z NonZeroZ Z where
-  hMul := fun a _ => a
 
 @[simp] theorem mul_right_cancel_iff {a b : Z} {c : NonZeroZ} : a * c = b * c ↔ a = b := by
   apply Iff.intro
