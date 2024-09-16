@@ -5,7 +5,8 @@ inductive N where
   | succ : N -> N
 
 namespace N
-@[simp] axiom zero_neq_succ {a : N} : zero = a.succ -> False
+@[simp] theorem zero_neq_succ {a : N} : zero = a.succ -> False := by
+  simp only [reduceCtorEq, imp_self]
 
 def add : N -> N -> N
   | zero, n => n
@@ -52,8 +53,7 @@ instance : Add N where
   case zero =>
     simp only [zero_add, add_zero]
   case succ n ih =>
-    simp only [HAdd.hAdd, Add.add, add]
-    simp only [HAdd.hAdd, Add.add, add] at ih
+    simp only [HAdd.hAdd, Add.add, add] at *
     rw [ih]
     have : ∀ (a b : N), (a + b).succ = a + b.succ := by
       intro a b
