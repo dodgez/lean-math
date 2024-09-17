@@ -84,7 +84,7 @@ def add : Q -> Q -> Q := Quotient.lift₂ addZ₂ addZ₂_is_well_defined
 instance : Add Q where
   add := add
 
-private def nonZeroOne : NonZeroZ := ⟨Z.one, by
+def nonZeroOne : NonZeroZ := ⟨Z.one, by
   simp only [Z.one, OfNat.ofNat, Zero.zero, Z.zero, One.one]
   intro h
   let h := Quotient.exact h
@@ -140,7 +140,7 @@ def one := mk (Z.one, nonZeroOne)
     }
   }
 
-theorem add_assoc (a b c : Q) : a + b + c = a + (b + c) := by
+@[simp] theorem add_assoc (a b c : Q) : a + b + c = a + (b + c) := by
   cases (Quotient.exists_rep a) with
   | intro aPos h1 => {
     let (a1, a2) := aPos
@@ -172,6 +172,16 @@ def nsmul : Nat -> Q -> Q
 
 @[simp] theorem nsmul_zero (a : Q) : nsmul 0 a = zero := by
   simp only [nsmul]
+
+instance : AddCommMonoid Q where
+  add_assoc := add_assoc
+  add_comm := add_comm
+  add_zero := add_zero
+  nsmul := nsmul
+  nsmul_succ := nsmul_succ
+  nsmul_zero := nsmul_zero
+  zero := zero
+  zero_add := zero_add
 
 def negZ₂ : Z₂ -> Q
   | (a, b) => mk (-a, b)
@@ -241,36 +251,262 @@ def zsmul : ℤ -> Q -> Q
 @[simp] private theorem zsmul_zero' (a : Q) : zsmul 0 a = zero := by
   rfl
 
+def mulZ₂ : Z₂ -> Z₂ -> Q
+  | (a₁, a₂), (b₁, b₂) => mk (a₁ * b₁, ⟨(a₂ * b₂ : Z), mul_nonzero⟩)
+theorem mulZ₂_is_well_defined (a₁ b₁ a₂ b₂ : Z₂) (h1 : Q.eqv a₁ a₂) (h2 : Q.eqv b₁ b₂) : mulZ₂ a₁ b₁ = mulZ₂ a₂ b₂ := by
+  apply Quotient.sound
+  simp only [HasEquiv.Equiv, Setoid.r, Q.eqv] at *
+  have swap_mul (a b c : Z) : a * (b * c) = b * (a * c) := by
+    simp only [<- Z.mul_assoc a, Z.mul_comm a, Z.mul_assoc]
+  repeat rw [Z.mul_assoc]
+  rw [swap_mul b₁.1]
+  rw [<- Z.mul_assoc]
+  rw [h1, h2]
+  rw [Z.mul_assoc]
+  simp only [swap_mul, Z.mul_comm]
+def mul : Q -> Q -> Q := Quotient.lift₂ mulZ₂ mulZ₂_is_well_defined
+
+instance : Mul Q where
+  mul := mul
+
+@[simp] theorem mul_assoc (a b c : Q) : a * b * c = a * (b * c) := by
+  rcases Quotient.exists_rep a with ⟨aPos, h1⟩
+  rcases Quotient.exists_rep b with ⟨bPos, h2⟩
+  rcases Quotient.exists_rep c with ⟨cPos, h3⟩
+  rw [<- h1, <- h2, <- h3]
+  apply Quotient.sound
+  have swap_mul (a b c : Z) : a * (b * c) = b * (a * c) := by
+    simp only [<- Z.mul_assoc a, Z.mul_comm a, Z.mul_assoc]
+  simp only [swap_mul, Z.mul_comm]
+  apply Equivalence.refl eqv_iseqv
+
+@[simp] theorem mul_comm (a b : Q) : a * b = b * a := by
+  rcases Quotient.exists_rep a with ⟨aPos, h1⟩
+  rcases Quotient.exists_rep b with ⟨bPos, h2⟩
+  rw [<- h1, <- h2]
+  apply Quotient.sound
+  simp only [Z.mul_comm]
+  apply Equivalence.refl eqv_iseqv
+
+@[simp] theorem one_mul (a : Q) : one * a = a := by
+  rcases Quotient.exists_rep a with ⟨aPos, h1⟩
+  rw [<- h1, one, nonZeroOne]
+  let (a₁, a₂) := aPos
+  apply Quotient.sound
+  simp only [HasEquiv.Equiv, Setoid.r, Q.eqv]
+  simp only [Z.one_mul, Z.mul_comm, Z.mul_one]
+
+@[simp] theorem mul_one (a : Q) : a * one = a := by
+  rw [mul_comm]
+  apply one_mul
+
+instance : CommMonoid Q where
+  mul := mul
+  mul_assoc := mul_assoc
+  mul_comm := mul_comm
+  mul_one := mul_one
+  one := one
+  one_mul := one_mul
+
+@[simp] theorem zero_mul (a : Q) : zero * a = 0 := by
+  cases Quotient.exists_rep a with
+  | intro aPos h =>
+    let (a₁, a₂) := aPos
+    repeat rw [<- h]
+    apply Quotient.sound
+    simp only [HasEquiv.Equiv, Setoid.r, Q.eqv, Z.zero_mul, Z.mul_zero]
+    simp only [OfNat.ofNat, Zero.zero, Z.zero_mul]
+
+@[simp] theorem mul_zero (a : Q) : a * zero = 0 := by
+  rw [mul_comm]
+  apply zero_mul
+
+@[simp] theorem left_distrib (a b c : Q) : a * (b + c) = a * b + a * c := by
+  rcases Quotient.exists_rep a with ⟨aPos, h1⟩
+  rcases Quotient.exists_rep b with ⟨bPos, h2⟩
+  rcases Quotient.exists_rep c with ⟨cPos, h3⟩
+  rw [<- h1, <- h2, <- h3]
+  apply Quotient.sound
+  simp only [HasEquiv.Equiv, Setoid.r, Q.eqv, Z.left_distrib, Z.right_distrib]
+  have swap_mul (a b c : Z) : a * (b * c) = b * (a * c) := by
+    simp only [<- Z.mul_assoc a, Z.mul_comm a, Z.mul_assoc]
+  simp only [Z.mul_comm, swap_mul]
+
+@[simp] theorem right_distrib (a b c : Q) : (a + b) * c = a * c + b * c := by
+  rw [mul_comm]
+  rw [left_distrib]
+  rw [mul_comm c, mul_comm c]
+
+def invZ₂ (z : Z₂) : Q :=
+  if h : (Z.decEq z.fst Z.zero).decide then
+    zero
+  else
+    mk (z.snd, ⟨z.fst, by
+      simp only [decide_eq_true_eq, ne_eq] at *
+      simp only [OfNat.ofNat, Zero.zero]
+      exact h⟩)
+theorem invZ₂_is_well_defined (a b : Z₂) (h : Q.eqv a b) : invZ₂ a = invZ₂ b := by
+  let (a₁, a₂) := a
+  let (b₁, b₂) := b
+  unfold invZ₂
+  simp
+  match (Z.decEq a₁ Z.zero) with
+  | rhs1 =>
+  match (Z.decEq b₁ Z.zero) with
+  | rhs2 =>
+    simp
+    by_cases a₁ = Z.zero
+    case pos aTheorem =>
+      simp only [aTheorem, ↓reduceDIte]
+      have : b₁ = Z.zero := by
+        by_contra b₁NotZero
+        simp only [Q.eqv, aTheorem, Z.zero_mul] at h
+        have : b₁ = Z.zero := by
+          apply @Z.mul_eq_zero b₁ ↑a₂ a₂.2
+          apply Eq.symm
+          rw [Z.mul_comm]
+          exact h
+        contradiction
+      simp only [this, ↓reduceDIte]
+    case neg aTheorem =>
+      simp only [aTheorem, ↓reduceDIte]
+      have : b₁ ≠ Z.zero := by
+        by_contra b₁Zero
+        simp only [Q.eqv] at h
+        rw [b₁Zero] at h
+        simp only [Z.mul_zero] at h
+        let  a₁Zero := @Z.mul_eq_zero a₁ ↑b₂ b₂.2 h
+        contradiction
+      simp only [this, ↓reduceDIte]
+      apply Quotient.sound
+      simp only [HasEquiv.Equiv, Setoid.r, Q.eqv] at *
+      apply Eq.symm
+      exact h
+def inv : Q -> Q := Quotient.lift invZ₂ invZ₂_is_well_defined
+
+@[simp] theorem inv_zero : inv zero = zero := by
+  rfl
+
+@[simp] theorem mul_inv_cancel (a : Q) (h : a ≠ zero) : a * inv a = one := by
+  rcases Quotient.exists_rep a with ⟨aPos, h₂⟩
+  simp only [one, <- h₂]
+  simp only [<- h₂] at h
+  let (a₁, a₂) := aPos
+  have : a₁ ≠ Z.zero := by
+    by_contra h₃
+    rcases Quotient.exists_rep a₁ with ⟨aPos2, h₄⟩
+    simp only [Z.zero, <- h₄] at h₃
+    let eqvZero := Quotient.exact h₃
+    simp only [HasEquiv.Equiv, Setoid.r, Q.eqv, Z.eqv, N.add_zero] at eqvZero
+    let contra := h.elim
+    have : ⟦(a₁, a₂)⟧ = zero := by
+      apply Quotient.sound
+      simp only [HasEquiv.Equiv, Setoid.r, Q.eqv, nonZeroOne, Z.mul_one, Z.mul_zero]
+      rw [<- h₄]
+      simp only [OfNat.ofNat, Zero.zero, Z.zero]
+      apply Quotient.sound
+      simp only [HasEquiv.Equiv, Setoid.r, Z.eqv, N.add_zero]
+      exact eqvZero
+    apply contra this
+  have : invZ₂ (a₁, a₂) = mk (a₂, ⟨a₁, this⟩) := by
+    unfold invZ₂
+    simp only [decide_eq_true_eq, ne_eq]
+    simp only [this, decide_False, Bool.false_eq_true, ↓reduceDIte]
+  unfold inv
+  simp
+  rw [this]
+  apply Quotient.sound
+  simp only [HasEquiv.Equiv, Setoid.r, Q.eqv, nonZeroOne, Z.mul_one, Z.mul_comm]
+
+def natCast : Nat -> Q
+  | Nat.zero => zero
+  | Nat.succ n => one + natCast n
+instance : NatCast Q where
+  natCast := natCast
+@[simp] theorem natCast_succ (n : Nat) : NatCast.natCast (n + 1) = NatCast.natCast n + one := by
+  simp only [NatCast.natCast, natCast, add_comm]
+@[simp] theorem natCast_zero : NatCast.natCast 0 = zero := by
+  simp only [NatCast.natCast, natCast]
+
+def intCast : Int -> Q
+  | Int.negSucc n => -natCast n.succ
+  | Int.ofNat n => natCast n
+instance : IntCast Q where
+  intCast := intCast
+@[simp] theorem intCast_ofNat (n : Nat) : (IntCast.intCast $ Int.ofNat n) = (NatCast.natCast : Nat -> Q) n := by
+  simp only [IntCast.intCast, NatCast.natCast, intCast]
+@[simp] theorem intCast_negSucc (n : Nat) : (IntCast.intCast $ Int.negSucc n) = - (NatCast.natCast : Nat -> Q) n.succ := by
+  simp only [IntCast.intCast, NatCast.natCast, intCast]
+
+def ratCast (q : ℚ) : Q :=
+  (Int.cast q.num : Q) * (Nat.cast q.den : Q).inv
+instance : RatCast Q where
+  ratCast := ratCast
+instance : Div Q where
+  div := fun a b => a * b.inv
+@[simp] theorem ratCast_def (q : ℚ) : (Rat.cast : ℚ -> Q) q = ((Int.cast : Int -> Q ) q.num) / ((Nat.cast : Nat -> Q) q.den) := by
+  simp only [Rat.cast, RatCast.ratCast] at *
+  simp only [ratCast, HDiv.hDiv, Div.div]
+
+def qsmul (q₁ : ℚ) (q₂ : Q) : Q := ratCast q₁ * q₂
+@[simp] theorem qsmul_def (a : ℚ) (x : Q) : qsmul a x = ratCast a * x := by
+  simp only [qsmul]
+
+def nnratCast (q : ℚ≥0) : Q :=
+  (Int.cast q.num : Q) * (Nat.cast q.den : Q).inv
+instance : NNRatCast Q where
+  nnratCast := nnratCast
+@[simp] theorem nnratCast_def (q : ℚ≥0) : (NNRat.cast : ℚ≥0 -> Q) q = ((Int.cast : Int -> Q ) q.num) / ((Nat.cast : Nat -> Q) q.den) := by
+  simp only [NNRat.cast, NNRatCast.nnratCast] at *
+  simp only [nnratCast, HDiv.hDiv, Div.div]
+
+def nnqsmul (q₁ : ℚ≥0) (q₂ : Q) : Q := nnratCast q₁ * q₂
+@[simp] theorem nnqsmul_def (q : ℚ≥0) (a : Q) : nnqsmul q a = nnratCast q * a := by
+  simp only [nnqsmul]
+
 instance : Field Q where
   add := add
   add_assoc := add_assoc
   add_comm := add_comm
   add_zero := add_zero
+  div_eq_mul_inv := by
+    intro a b
+    simp only [HDiv.hDiv, Div.div]
   exists_pair_ne := exists_pair_ne
-  left_distrib := sorry
-  inv := sorry
-  inv_zero := sorry
-  mul := sorry
-  mul_assoc := sorry
-  mul_comm := sorry
-  mul_inv_cancel := sorry
-  mul_one := sorry
-  mul_zero := sorry
+  left_distrib := left_distrib
+  intCast := intCast
+  intCast_negSucc := intCast_negSucc
+  intCast_ofNat := intCast_ofNat
+  inv := inv
+  inv_zero := inv_zero
+  mul := mul
+  mul_assoc := mul_assoc
+  mul_comm := mul_comm
+  mul_inv_cancel := mul_inv_cancel
+  mul_one := mul_one
+  mul_zero := mul_zero
+  natCast := natCast
+  natCast_succ := natCast_succ
+  natCast_zero := natCast_zero
   neg := neg
   neg_add_cancel := neg_add_cancel
-  nnqsmul := sorry
-  nnqsmul_def := sorry
+  nnqsmul := nnqsmul
+  nnqsmul_def := nnqsmul_def
+  nnratCast := nnratCast
+  nnratCast_def := nnratCast_def
   nsmul := nsmul
   nsmul_succ := nsmul_succ
   nsmul_zero := nsmul_zero
   one := one
-  one_mul := sorry
-  qsmul := sorry
-  qsmul_def := sorry
-  right_distrib := sorry
+  one_mul := one_mul
+  qsmul := qsmul
+  qsmul_def := qsmul_def
+  ratCast := ratCast
+  ratCast_def := ratCast_def
+  right_distrib := right_distrib
   zero := zero
   zero_add := zero_add
-  zero_mul := sorry
+  zero_mul := zero_mul
   zsmul := zsmul
   zsmul_neg' := zsmul_neg'
   zsmul_succ' := zsmul_succ'

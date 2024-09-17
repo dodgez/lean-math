@@ -42,3 +42,27 @@ example : Q.mk (Z.mk (1, 0), two) + Q.mk (Z.mk (2, 0), four) = Q.mk (two, two) :
   simp only [OfNat.ofNat, ofNat, N.mul_zero, N.zero_mul, N.add_zero, N.zero_add]
   simp only [HMul.hMul, Mul.mul, N.mul]
   simp only [N.add_comm, N.add_succ, N.add_zero, Z.eqv_is_refl]
+
+def toStringN : N -> String
+    | N.zero => "0"
+    | N.succ n => "succ " ++ toStringN n
+instance : ToString N where
+  toString := toStringN
+#eval N.zero.succ
+
+def toStringN₂ : N × N -> String
+  | (a, b) => s!"{ToString.toString a} - {ToString.toString b}"
+instance : ToString Z where
+  toString := Quotient.lift toStringN₂ sorry
+#eval! Z.mk (N.zero.succ, N.zero)
+
+def toStringZ₂ : Z₂ -> String
+  | (a, b) => s!"({ToString.toString a}) / ({ToString.toString b.val})"
+instance : ToString Q where
+  toString := Quotient.lift toStringZ₂ sorry
+#eval! Q.one
+
+#eval! Q.invZ₂ (Z.one + Z.one, Q.nonZeroOne)
+#eval! Q.invZ₂ (Z.zero, Q.nonZeroOne)
+#eval! Q.inv $ Q.mk (Z.one + Z.one, Q.nonZeroOne)
+#eval! Q.inv $ Q.mk (Z.zero, Q.nonZeroOne)
