@@ -44,6 +44,30 @@ end Z
 def Z := Quotient Z.instSetoidN₂
 def Z.mk : N₂ -> Z := Quotient.mk Z.instSetoidN₂
 
+private def decideEqSucc (n m : N) : Decidable (n = m) -> Decidable (n.succ = m.succ) := by
+  intro h
+  by_cases n = m
+  case pos h2 =>
+    apply Decidable.isTrue
+    rw [h2]
+  case neg h2 =>
+    apply Decidable.isFalse
+    by_contra h3
+    let h4 := N.succ_eq h3
+    contradiction
+private def decideEqN : (a : N) -> (b : N) -> Decidable (a = b)
+  | N.zero, N.zero => isTrue rfl
+  | N.succ _, N.zero => isFalse $ by simp only [reduceCtorEq, not_false_eq_true]
+  | N.zero, N.succ _ => isFalse $ by simp only [reduceCtorEq, not_false_eq_true]
+  | N.succ n, N.succ m => decideEqSucc n m $ decideEqN n m
+private instance : DecidableEq N := decideEqN
+private def decideEq (a b : N₂) : Decidable (a ≈ b) := by
+  let (a₁, a₂) := a
+  let (b₁, b₂) := b
+  simp only [HasEquiv.Equiv, Setoid.r, Z.eqv]
+  apply instDecidableEqN
+def Z.decEq : DecidableEq Z := @Quotient.decidableEq N₂ instSetoidN₂ decideEq
+
 namespace Z
 def addN₂ : N₂ -> N₂ -> Z
   | (a, b), (c, d) => mk (a + c, b + d)
@@ -116,7 +140,7 @@ def zero := mk (N.zero, N.zero)
     }
   }
 
-theorem add_assoc (a b c : Z) : a + b + c = a + (b + c) := by
+@[simp] theorem add_assoc (a b c : Z) : a + b + c = a + (b + c) := by
   cases (Quotient.exists_rep a) with
   | intro aPos h1 => {
     let (a1, a2) := aPos
@@ -233,7 +257,7 @@ def mul : Z -> Z -> Z := Quotient.lift₂ mulN₂ mulN₂_is_well_defined
 instance : Mul Z where
   mul := mul
 
-theorem mul_assoc (a b c : Z) : a * b * c = a * (b * c) := by
+@[simp] theorem mul_assoc (a b c : Z) : a * b * c = a * (b * c) := by
   cases Quotient.exists_rep a with
   | intro aPos h1 =>
   cases Quotient.exists_rep b with
@@ -251,7 +275,7 @@ theorem mul_assoc (a b c : Z) : a * b * c = a * (b * c) := by
   simp only [swap_add, N.add_comm, swap_mul, N.mul_comm]
   apply Equivalence.refl eqv_iseqv
 
-theorem mul_comm (a b : Z) : a * b = b * a := by
+@[simp] theorem mul_comm (a b : Z) : a * b = b * a := by
   cases Quotient.exists_rep a with
   | intro aPos h1 =>
   cases Quotient.exists_rep b with
@@ -263,7 +287,7 @@ theorem mul_comm (a b : Z) : a * b = b * a := by
 
 def one := mk (1, 0)
 
-theorem one_mul (a : Z) : one * a = a := by
+@[simp] theorem one_mul (a : Z) : one * a = a := by
   cases Quotient.exists_rep a with
   | intro aPos h =>
     let (a₁, a₂) := aPos
@@ -273,7 +297,7 @@ theorem one_mul (a : Z) : one * a = a := by
     simp only [OfNat.ofNat, One.one, Zero.zero, N.mul_one, N.add_zero, N.mul_zero]
     apply Equivalence.refl eqv_iseqv
 
-theorem mul_one (a : Z) : a * one = a := by
+@[simp] theorem mul_one (a : Z) : a * one = a := by
   rw [mul_comm]
   apply one_mul
 
@@ -285,7 +309,7 @@ instance : CommMonoid Z where
   one := one
   one_mul := one_mul
 
-theorem zero_mul (a : Z) : zero * a = 0 := by
+@[simp] theorem zero_mul (a : Z) : zero * a = 0 := by
   cases Quotient.exists_rep a with
   | intro aPos h =>
     let (a₁, a₂) := aPos
@@ -295,11 +319,11 @@ theorem zero_mul (a : Z) : zero * a = 0 := by
     simp only [OfNat.ofNat, Zero.zero, N.add_zero, N.mul_zero]
     apply Equivalence.refl eqv_iseqv
 
-theorem mul_zero (a : Z) : a * zero = 0 := by
+@[simp] theorem mul_zero (a : Z) : a * zero = 0 := by
   rw [mul_comm]
   apply zero_mul
 
-theorem left_distrib (a b c : Z) : a * (b + c) = a * b + a * c := by
+@[simp] theorem left_distrib (a b c : Z) : a * (b + c) = a * b + a * c := by
   cases Quotient.exists_rep a with
   | intro aPos h1 =>
   cases Quotient.exists_rep b with
@@ -317,7 +341,7 @@ theorem left_distrib (a b c : Z) : a * (b + c) = a * b + a * c := by
   simp only [swap_add, N.add_comm, swap_mul, N.mul_comm]
   apply Equivalence.refl eqv_iseqv
 
-theorem right_distrib (a b c : Z) : (a + b) * c = a * c + b * c := by
+@[simp] theorem right_distrib (a b c : Z) : (a + b) * c = a * c + b * c := by
   rw [mul_comm]
   rw [left_distrib]
   rw [mul_comm c, mul_comm c]
@@ -414,7 +438,7 @@ instance : CommRing Z where
           right
           apply eqv_succ_right h_right
 
-theorem exists_reduce_Z {a : Z} : ∃b : N, a = mk (b, 0) ∨ a = mk (0, b) := by
+@[simp] theorem exists_reduce_Z {a : Z} : ∃b : N, a = mk (b, 0) ∨ a = mk (0, b) := by
   cases Quotient.exists_rep a with
   | intro aPos h1 =>
   rcases @exists_reduce aPos with ⟨b, h⟩
